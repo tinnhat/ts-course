@@ -19,16 +19,30 @@ export const useProgress = () => {
   const [progressMap, setProgressMap] = useState<ProgressMap>({});
   const [isReady, setIsReady] = useState(false);
 
-  useEffect(() => {
+  const syncFromStorage = () => {
     const stored = getProgressMap();
     setProgressMap(stored);
+  };
+
+  useEffect(() => {
+    syncFromStorage();
     setIsReady(true);
+
+    const handleProgressUpdate = () => syncFromStorage();
+    window.addEventListener("ts-course-progress", handleProgressUpdate);
+    return () => window.removeEventListener("ts-course-progress", handleProgressUpdate);
   }, []);
+
+  const emitProgressUpdate = () => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(new Event("ts-course-progress"));
+  };
 
   const toggleExercise = (topicId: string, exerciseId: string) => {
     setProgressMap((prev) => {
       const updated = toggleExerciseInMap(topicId, exerciseId, prev);
       saveProgressMap(updated);
+      emitProgressUpdate();
       return updated;
     });
   };
@@ -41,6 +55,7 @@ export const useProgress = () => {
     setProgressMap((prev) => {
       const updated = setExerciseCompletedInMap(topicId, exerciseId, completed, prev);
       saveProgressMap(updated);
+      emitProgressUpdate();
       return updated;
     });
   };
@@ -49,6 +64,7 @@ export const useProgress = () => {
     setProgressMap((prev) => {
       const updated = setQuizResultInMap(topicId, score, passed, prev);
       saveProgressMap(updated);
+      emitProgressUpdate();
       return updated;
     });
   };
